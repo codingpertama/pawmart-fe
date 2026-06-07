@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LuShoppingCart, LuChevronDown, LuUser, LuPackage, LuLogOut } from "react-icons/lu";
+import { LuShoppingCart, LuChevronDown, LuPackage, LuLogOut } from "react-icons/lu";
 import Avatar from 'react-avatar';
 import { useCart } from "../context/CartContext";
 
@@ -28,9 +28,7 @@ export default function UserNavbar({ user = null }) {
 
             {/* Logo */}
             <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
-                    P
-                </div>
+                <img src="/images/logo-pawmart.jpg" alt="PawMart Logo" className="w-8 h-8 rounded-lg object-cover" />
                 <span className="font-bold text-xl text-gray-800">
                     Paw<span className="text-orange-500">Mart</span>
                 </span>
@@ -77,11 +75,11 @@ export default function UserNavbar({ user = null }) {
                                     <div onClick={() => setIsOpen(false)} className="fixed inset-0 z-40" />
 
                                     <div className="absolute right-0 top-12 z-50 w-48 bg-white border border-gray-100 rounded-2xl shadow-lg py-2">
-                                        <button className="w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-orange-50 flex items-center gap-2 transition">
+                                        {/* <button className="w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-orange-50 flex items-center gap-2 transition">
                                             <LuUser size={16} className="text-gray-400" />
                                             Profil / akun saya
-                                        </button>
-                                        <button className="w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-orange-50 flex items-center gap-2 transition">
+                                        </button> */}
+                                        <button onClick={() => navigate("/orders")} className="w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-orange-50 flex items-center gap-2 transition">
                                             <LuPackage size={16} className="text-gray-400" />
                                             Pesanan saya
                                         </button>
