@@ -1,23 +1,23 @@
 import { useState, useEffect } from "react";
 import { getProducts, getCategories } from "../../services/api";
 import ProductCard from "../../components/ProductCard";
+import { LuSearch, LuPackageSearch } from "react-icons/lu";
 
 export default function ProductsPage() {
-    // ── STATE ──────────────────────────────────────────────────────────────
-    const [products, setProducts] = useState([]);       // semua produk dari API
-    const [categories, setCategories] = useState([]);   // daftar kategori dari API
-    const [search, setSearch] = useState("");           // kata kunci pencarian
-    const [activeCat, setActiveCat] = useState(null);   // null = semua kategori
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [search, setSearch] = useState("");
+    const [activeCat, setActiveCat] = useState(null); // null berarti semua kategori ditampilkan
     const [loading, setLoading] = useState(true);
 
-    // ── LOAD DATA ──────────────────────────────────────────────────────────
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    async function loadData() {
         try {
-            // ambil produk dan kategori secara bersamaan biar lebih cepat
+            // ambil produk dan kategori sekaligus pakai Promise.all
+            // lebih cepat dari nunggu satu-satu karena keduanya jalan paralel
             const [productsRes, categoriesRes] = await Promise.all([
                 getProducts(),
                 getCategories(),
@@ -29,19 +29,18 @@ export default function ProductsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
-    // ── FILTER LOGIC ───────────────────────────────────────────────────────
-    // filter produk berdasarkan search dan kategori aktif
+    // filter dijalankan setiap kali search atau activeCat berubah
+    // tidak perlu useEffect karena ini cuma komputasi dari state yang sudah ada
     const filteredProducts = products.filter((p) => {
-        // cocokkan nama produk dengan kata kunci (case-insensitive)
+        // cek apakah nama produk mengandung kata kunci pencarian
         const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-        // kalau activeCat null berarti "Semua", skip filter kategori
+        // kalau activeCat null, semua kategori lolos filter
         const matchCat = activeCat === null || p.category_id === activeCat;
         return matchSearch && matchCat;
     });
 
-    // ── LOADING STATE ──────────────────────────────────────────────────────
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -50,11 +49,8 @@ export default function ProductsPage() {
         );
     }
 
-    // ── RENDER ─────────────────────────────────────────────────────────────
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8">
-
-            {/* ── Header ── */}
+        <div>
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Semua Produk</h1>
                 <p className="text-sm text-gray-400 mt-1">
@@ -62,24 +58,24 @@ export default function ProductsPage() {
                 </p>
             </div>
 
-            {/* ── Search bar ── */}
+            {/* search bar — value dikontrol React lewat state search */}
             <div className="relative mb-4">
-                {/* icon search di kiri */}
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                    🔍
-                </span>
+                <LuSearch
+                    size={16}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
                 <input
                     type="text"
                     placeholder="Cari produk..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-orange-400 transition"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition"
                 />
             </div>
 
-            {/* ── Filter chip kategori ── */}
+            {/* chip filter kategori — diklik untuk set activeCat */}
             <div className="flex gap-2 flex-wrap mb-6">
-                {/* chip "Semua" — aktif kalau activeCat null */}
+                {/* chip "Semua" — set activeCat ke null untuk reset filter */}
                 <button
                     onClick={() => setActiveCat(null)}
                     className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
@@ -91,7 +87,7 @@ export default function ProductsPage() {
                     Semua
                 </button>
 
-                {/* chip per kategori — dari API */}
+                {/* chip per kategori dari API */}
                 {categories.map((cat) => (
                     <button
                         key={cat.id}
@@ -107,29 +103,26 @@ export default function ProductsPage() {
                 ))}
             </div>
 
-            {/* ── Label jumlah hasil ── */}
             <p className="text-sm text-gray-400 mb-4">
                 Menampilkan{" "}
-                <span className="font-semibold text-gray-600">
-                    {filteredProducts.length}
-                </span>{" "}
+                <span className="font-semibold text-gray-600">{filteredProducts.length}</span>{" "}
                 produk
             </p>
 
-            {/* ── Grid produk ── */}
             {filteredProducts.length === 0 ? (
-                // tampilan kalau hasil filter kosong
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <p className="text-5xl mb-4">😿</p>
+                // tampilan kalau tidak ada produk yang cocok dengan filter
+                <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
+                        <LuPackageSearch size={28} className="text-gray-300" />
+                    </div>
                     <p className="text-gray-500 font-semibold">Produk tidak ditemukan</p>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-gray-400">
                         Coba kata kunci lain atau pilih kategori berbeda
                     </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {filteredProducts.map((product) => (
-                        // pakai ProductCard yang sama persis dengan homepage
                         <ProductCard key={product.id} product={product} />
                     ))}
                 </div>

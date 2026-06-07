@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+@theme {
+  --color-orange-50: #f5ebe1;
+  --color-orange-100: #eed3bb;
+  --color-orange-200: #dcab85;
+  --color-orange-300: #c28157;
+  --color-orange-400: #9f5f35;
+  --color-orange-500: #895019;
+  --color-orange-600: #6f4017;
+  --color-orange-700: #53310f;
+  --color-orange-800: #3a240b;
+  --color-orange-900: #271608;
+}

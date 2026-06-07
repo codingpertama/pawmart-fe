@@ -3,17 +3,19 @@ import { getCategories, createCategory, updateCategory, deleteCategory } from ".
 import { LuPencil, LuTrash2, LuPlus, LuX } from "react-icons/lu";
 
 export default function CategoriesPage() {
+
+    // daftar kategori yang ditampilkan di tabel
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // state untuk modal tambah/edit
+    // state modal tambah/edit
     const [modalOpen, setModalOpen] = useState(false);
-    const [editTarget, setEditTarget] = useState(null); // null = tambah, object = edit
-    const [formName, setFormName] = useState("");
+    const [editTarget, setEditTarget] = useState(null); // null = mode tambah, ada isinya = mode edit
+    const [formName, setFormName] = useState("");       // kategori cuma punya satu field: nama
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState("");
 
-    // state untuk konfirmasi hapus
+    // deleteTarget = kategori yang mau dihapus, null berarti modal hapus tertutup
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -32,7 +34,7 @@ export default function CategoriesPage() {
         }
     }
 
-    // buka modal tambah
+    // reset form ke kosong, lalu buka modal mode tambah
     function handleOpenAdd() {
         setEditTarget(null);
         setFormName("");
@@ -40,7 +42,7 @@ export default function CategoriesPage() {
         setModalOpen(true);
     }
 
-    // buka modal edit — isi form dengan data yang mau diedit
+    // isi form dengan nama kategori yang dipilih, lalu buka modal mode edit
     function handleOpenEdit(category) {
         setEditTarget(category);
         setFormName(category.name);
@@ -48,7 +50,6 @@ export default function CategoriesPage() {
         setModalOpen(true);
     }
 
-    // tutup modal
     function handleCloseModal() {
         setModalOpen(false);
         setEditTarget(null);
@@ -56,7 +57,8 @@ export default function CategoriesPage() {
         setFormError("");
     }
 
-    // submit form tambah / edit
+    // satu fungsi buat handle tambah dan edit sekaligus
+    // bedanya cuma di bagian if editTarget: kalau ada → update, kalau null → create
     async function handleSubmit() {
         if (!formName.trim()) {
             setFormError("Nama kategori wajib diisi.");
@@ -68,13 +70,12 @@ export default function CategoriesPage() {
 
         try {
             if (editTarget) {
-                // mode edit
                 await updateCategory(editTarget.id, { name: formName });
             } else {
-                // mode tambah
                 await createCategory({ name: formName });
             }
-            await loadCategories(); // refresh list
+            // setelah berhasil, reload tabel supaya data terbaru langsung muncul
+            await loadCategories();
             handleCloseModal();
         } catch (err) {
             const message = err.response?.data?.message || "Gagal menyimpan kategori.";
@@ -84,14 +85,13 @@ export default function CategoriesPage() {
         }
     }
 
-    // hapus kategori
     async function handleDelete() {
         if (!deleteTarget) return;
         setDeleteLoading(true);
         try {
             await deleteCategory(deleteTarget.id);
             await loadCategories();
-            setDeleteTarget(null);
+            setDeleteTarget(null); // tutup modal konfirmasi hapus
         } catch (err) {
             alert("Gagal menghapus kategori.");
         } finally {
@@ -109,7 +109,8 @@ export default function CategoriesPage() {
 
     return (
         <div>
-            {/* Header */}
+
+            {/* Header: judul + tombol tambah */}
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Kategori</h1>
@@ -124,7 +125,7 @@ export default function CategoriesPage() {
                 </button>
             </div>
 
-            {/* Tabel */}
+            {/* Tabel daftar kategori */}
             <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
                 <table className="w-full text-sm">
                     <thead>
@@ -145,10 +146,15 @@ export default function CategoriesPage() {
                         ) : (
                             categories.map((category, index) => (
                                 <tr key={category.id} className="hover:bg-gray-50 transition">
+
+                                    {/* nomor urut pakai index + 1 karena index mulai dari 0 */}
                                     <td className="px-6 py-4 text-gray-400">{index + 1}</td>
+
                                     <td className="px-6 py-4 font-semibold text-gray-800">
                                         {category.name}
                                     </td>
+
+                                    {/* format tanggal ke bahasa Indonesia, contoh: "3 Jun 2025" */}
                                     <td className="px-6 py-4 text-gray-400">
                                         {new Date(category.created_at).toLocaleDateString("id-ID", {
                                             day: "numeric",
@@ -156,9 +162,9 @@ export default function CategoriesPage() {
                                             year: "numeric",
                                         })}
                                     </td>
+
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            {/* Tombol edit */}
                                             <button
                                                 onClick={() => handleOpenEdit(category)}
                                                 className="flex items-center gap-1.5 text-xs font-semibold text-blue-500 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
@@ -166,7 +172,6 @@ export default function CategoriesPage() {
                                                 <LuPencil size={13} />
                                                 Edit
                                             </button>
-                                            {/* Tombol hapus */}
                                             <button
                                                 onClick={() => setDeleteTarget(category)}
                                                 className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition"
@@ -176,6 +181,7 @@ export default function CategoriesPage() {
                                             </button>
                                         </div>
                                     </td>
+
                                 </tr>
                             ))
                         )}
@@ -183,12 +189,12 @@ export default function CategoriesPage() {
                 </table>
             </div>
 
-            {/* ── MODAL TAMBAH / EDIT ── */}
+            {/* MODAL TAMBAH / EDIT KATEGORI */}
             {modalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
 
-                        {/* Header modal */}
+                        {/* judul modal berubah tergantung mode */}
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="font-bold text-gray-800">
                                 {editTarget ? "Edit Kategori" : "Tambah Kategori"}
@@ -201,13 +207,13 @@ export default function CategoriesPage() {
                             </button>
                         </div>
 
-                        {/* Form */}
                         {formError && (
                             <div className="bg-red-50 text-red-500 text-sm rounded-xl px-4 py-3 mb-4">
                                 {formError}
                             </div>
                         )}
 
+                        {/* form kategori cuma satu input karena tabelnya memang cuma punya kolom name */}
                         <div className="flex flex-col gap-1.5 mb-6">
                             <label className="text-sm font-semibold text-gray-600">
                                 Nama Kategori
@@ -221,7 +227,6 @@ export default function CategoriesPage() {
                             />
                         </div>
 
-                        {/* Tombol aksi */}
                         <div className="flex gap-3">
                             <button
                                 onClick={handleCloseModal}
@@ -237,11 +242,12 @@ export default function CategoriesPage() {
                                 {formLoading ? "Menyimpan..." : "Simpan"}
                             </button>
                         </div>
+
                     </div>
                 </div>
             )}
 
-            {/* ── MODAL KONFIRMASI HAPUS ── */}
+            {/* MODAL KONFIRMASI HAPUS */}
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
@@ -267,6 +273,7 @@ export default function CategoriesPage() {
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

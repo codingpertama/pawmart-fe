@@ -4,14 +4,19 @@ import { getImageUrl } from "../../services/api";
 import { LuChevronDown, LuChevronUp, LuDownload } from "react-icons/lu";
 
 export default function AdminOrdersPage() {
+
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // tab aktif: "semua", "diproses", atau "selesai"
     const [activeTab, setActiveTab] = useState("semua");
 
-    // expandedId: ID order yang sedang dibuka detailnya
+    // expandedId nyimpen ID order yang lagi dibuka detailnya
+    // kalau null berarti semua order sedang tertutup
     const [expandedId, setExpandedId] = useState(null);
 
-    // state konfirmasi update status
+    // statusTarget = order yang mau dikonfirmasi selesai
+    // dipakai buat isi konten modal konfirmasi
     const [statusTarget, setStatusTarget] = useState(null);
     const [statusLoading, setStatusLoading] = useState(false);
 
@@ -30,25 +35,28 @@ export default function AdminOrdersPage() {
         }
     }
 
-    // filter berdasarkan tab aktif
+    // filter orders berdasarkan tab yang aktif
+    // kalau "semua" → tampilkan semua, selainnya → filter by status
     const filteredOrders = orders.filter((order) => {
         if (activeTab === "semua") return true;
         return order.status === activeTab;
     });
 
-    // buka/tutup detail order
+    // toggle expand/collapse detail order
+    // kalau order yang diklik sudah terbuka → tutup (set null)
+    // kalau order lain yang diklik → buka yang itu, tutup yang lama
     function toggleExpand(id) {
         setExpandedId(expandedId === id ? null : id);
     }
 
-    // konfirmasi selesai
+    // update status order ke "selesai" setelah admin konfirmasi
     async function handleUpdateStatus() {
         if (!statusTarget) return;
         setStatusLoading(true);
         try {
             await updateOrderStatus(statusTarget.id, { status: "selesai" });
             await loadOrders();
-            setStatusTarget(null);
+            setStatusTarget(null); // tutup modal setelah berhasil
         } catch (err) {
             alert("Gagal update status pesanan.");
         } finally {
@@ -56,15 +64,23 @@ export default function AdminOrdersPage() {
         }
     }
 
-    // export excel — trigger download
+    // export data pesanan ke file Excel
+    // cara kerjanya: API kembalikan binary (blob), lalu dibikin jadi link download sementara
     async function handleExport() {
         try {
             const response = await exportOrders();
-            // buat link download dari blob response
+
+            // buat object URL dari blob yang diterima
             const url = window.URL.createObjectURL(new Blob([response.data]));
+
+            // buat elemen <a> secara programatik, klik otomatis, lalu hapus
+            // ini cara standar buat trigger download file dari JavaScript tanpa buka tab baru
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", `pesanan-pawmart-${new Date().toLocaleDateString("id-ID")}.xlsx`);
+            link.setAttribute(
+                "download",
+                `pesanan-pawmart-${new Date().toLocaleDateString("id-ID")}.xlsx`
+            );
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -89,13 +105,13 @@ export default function AdminOrdersPage() {
 
     return (
         <div>
-            {/* Header */}
+
+            {/* Header: judul + tombol export */}
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Pesanan</h1>
                     <p className="text-sm text-gray-400 mt-1">Kelola semua pesanan masuk</p>
                 </div>
-                {/* Tombol export excel */}
                 <button
                     onClick={handleExport}
                     className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
@@ -105,7 +121,8 @@ export default function AdminOrdersPage() {
                 </button>
             </div>
 
-            {/* Tab filter */}
+            {/* Tab filter: semua, diproses, selesai */}
+            {/* badge di setiap tab dihitung langsung dari array orders */}
             <div className="flex gap-2 mb-6">
                 {["semua", "diproses", "selesai"].map((tab) => (
                     <button
@@ -117,7 +134,6 @@ export default function AdminOrdersPage() {
                             }`}
                     >
                         {tab}
-                        {/* badge jumlah */}
                         <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab
                                 ? "bg-white/20 text-white"
                                 : "bg-gray-200 text-gray-500"
@@ -130,7 +146,7 @@ export default function AdminOrdersPage() {
                 ))}
             </div>
 
-            {/* List pesanan */}
+            {/* List pesanan yang sudah difilter */}
             {filteredOrders.length === 0 ? (
                 <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center">
                     <p className="text-4xl mb-3">📦</p>
@@ -143,13 +159,12 @@ export default function AdminOrdersPage() {
                             key={order.id}
                             className="bg-white border border-gray-100 rounded-2xl overflow-hidden"
                         >
-                            {/* Header row — klik untuk expand */}
+                            {/* Baris utama order — klik buat buka/tutup detail */}
                             <div
                                 className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition"
                                 onClick={() => toggleExpand(order.id)}
                             >
                                 <div className="flex items-center gap-4">
-                                    {/* ID & tanggal */}
                                     <div>
                                         <p className="font-bold text-gray-800">Pesanan #{order.id}</p>
                                         <p className="text-xs text-gray-400 mt-0.5">
@@ -161,7 +176,7 @@ export default function AdminOrdersPage() {
                                         </p>
                                     </div>
 
-                                    {/* Nama pembeli */}
+                                    {/* Info pembeli dan total disembunyikan di layar kecil (hidden md:block) */}
                                     <div className="hidden md:block">
                                         <p className="text-xs text-gray-400">Pembeli</p>
                                         <p className="text-sm font-semibold text-gray-700">
@@ -169,7 +184,6 @@ export default function AdminOrdersPage() {
                                         </p>
                                     </div>
 
-                                    {/* Total */}
                                     <div className="hidden md:block">
                                         <p className="text-xs text-gray-400">Total</p>
                                         <p className="text-sm font-semibold text-orange-500">
@@ -179,7 +193,7 @@ export default function AdminOrdersPage() {
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                    {/* Badge status */}
+                                    {/* badge warna tergantung status */}
                                     <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${order.status === "selesai"
                                             ? "bg-green-100 text-green-600"
                                             : "bg-yellow-100 text-yellow-600"
@@ -187,7 +201,7 @@ export default function AdminOrdersPage() {
                                         {order.status}
                                     </span>
 
-                                    {/* Icon expand */}
+                                    {/* ikon panah berubah tergantung order ini sedang dibuka atau tidak */}
                                     {expandedId === order.id
                                         ? <LuChevronUp size={18} className="text-gray-400" />
                                         : <LuChevronDown size={18} className="text-gray-400" />
@@ -195,11 +209,11 @@ export default function AdminOrdersPage() {
                                 </div>
                             </div>
 
-                            {/* Detail — muncul kalau di-expand */}
+                            {/* Bagian detail — hanya muncul kalau expandedId cocok dengan order.id ini */}
                             {expandedId === order.id && (
                                 <div className="border-t border-gray-100 p-5">
 
-                                    {/* Info pembeli & alamat */}
+                                    {/* Info pembeli, alamat, dan bukti bayar dalam 3 kolom */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                                         <div>
                                             <p className="text-xs text-gray-400 mb-1">Pembeli</p>
@@ -213,9 +227,9 @@ export default function AdminOrdersPage() {
                                         <div>
                                             <p className="text-xs text-gray-400 mb-1">Bukti Pembayaran</p>
                                             {order.payment_proof ? (
-
+                                                // kalau ada bukti bayar, tampilkan link yang buka di tab baru
                                                 <a
-                                                    href={getImageUrl(`/storage/${order.payment_proof }`)}
+                                                    href={getImageUrl(`/storage/${order.payment_proof}`)}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="text-sm font-semibold text-blue-500 hover:underline"
@@ -228,7 +242,7 @@ export default function AdminOrdersPage() {
                                         </div>
                                     </div>
 
-                                    {/* List item produk */}
+                                    {/* Daftar produk yang dipesan dalam order ini */}
                                     <div className="flex flex-col gap-3 mb-5">
                                         <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">
                                             Item Dipesan
@@ -236,9 +250,9 @@ export default function AdminOrdersPage() {
                                         {order.order_items.map((item) => (
                                             <div key={item.id} className="flex gap-3 items-center">
                                                 <div className="w-12 h-12 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
-                                                    {item.product?.image_url ? (
+                                                    {item.product?.image ? (
                                                         <img
-                                                            src={getImageUrl(item.product.image_url)}
+                                                            src={`http://127.0.0.1:8000/storage/${item.product.image}`}
                                                             alt={item.product.name}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -252,10 +266,12 @@ export default function AdminOrdersPage() {
                                                     <p className="text-sm font-semibold text-gray-800">
                                                         {item.product?.name}
                                                     </p>
+                                                    {/* item.price adalah harga snapshot saat transaksi, bukan harga produk sekarang */}
                                                     <p className="text-xs text-gray-400">
                                                         {item.quantity} x {formattedPrice(item.price)}
                                                     </p>
                                                 </div>
+                                                {/* subtotal per item: quantity dikali harga saat beli */}
                                                 <p className="text-sm font-bold text-gray-800">
                                                     {formattedPrice(item.quantity * item.price)}
                                                 </p>
@@ -265,7 +281,7 @@ export default function AdminOrdersPage() {
 
                                     <hr className="border-gray-100 mb-4" />
 
-                                    {/* Total & tombol konfirmasi */}
+                                    {/* Total dan tombol konfirmasi */}
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-xs text-gray-400">Total Pembayaran</p>
@@ -274,7 +290,7 @@ export default function AdminOrdersPage() {
                                             </p>
                                         </div>
 
-                                        {/* Tombol konfirmasi selesai — hanya muncul kalau masih diproses */}
+                                        {/* tombol konfirmasi hanya muncul kalau status masih "diproses" */}
                                         {order.status === "diproses" && (
                                             <button
                                                 onClick={() => setStatusTarget(order)}
@@ -284,6 +300,7 @@ export default function AdminOrdersPage() {
                                             </button>
                                         )}
                                     </div>
+
                                 </div>
                             )}
                         </div>
@@ -291,7 +308,7 @@ export default function AdminOrdersPage() {
                 </div>
             )}
 
-            {/* ── MODAL KONFIRMASI STATUS ── */}
+            {/* MODAL KONFIRMASI UBAH STATUS KE SELESAI */}
             {statusTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
@@ -321,6 +338,7 @@ export default function AdminOrdersPage() {
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

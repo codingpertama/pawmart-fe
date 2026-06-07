@@ -1,10 +1,12 @@
 import { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProductById, addToCart, getImageUrl } from "../../services/api";
+import { getProductById, getImageUrl } from "../../services/api";
 import { CartContext } from "../../context/CartContext";
+import { LuShoppingBag, LuArrowLeft } from "react-icons/lu";
 
 export default function ProductDetailPage() {
-    const { id } = useParams(); // ambil id dari URL /products/:id
+    // id diambil dari URL, misal /products/3 → id = "3"
+    const { id } = useParams();
     const navigate = useNavigate();
     const { tambahKeCart } = useContext(CartContext);
 
@@ -14,7 +16,8 @@ export default function ProductDetailPage() {
     const [error, setError] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
 
-    // ambil detail produk saat halaman dibuka
+    // [id] di dependency array artinya useEffect jalan ulang
+    // kalau id di URL berubah, misal pindah dari /products/1 ke /products/2
     useEffect(() => {
         loadProduct();
     }, [id]);
@@ -31,7 +34,6 @@ export default function ProductDetailPage() {
     }
 
     async function handleAddToCart() {
-        // cek login dulu
         const token = localStorage.getItem("token");
         if (!token) {
             navigate("/login");
@@ -42,6 +44,7 @@ export default function ProductDetailPage() {
         setSuccessMsg("");
         setError("");
 
+        // tambahKeCart dari CartContext — fungsi ini sekaligus update badge navbar
         const result = await tambahKeCart(product.id);
         if (result.success) {
             setSuccessMsg("Produk berhasil ditambahkan ke keranjang!");
@@ -51,7 +54,6 @@ export default function ProductDetailPage() {
         setCartLoading(false);
     }
 
-    // format harga ke rupiah
     const formattedPrice = product
         ? new Intl.NumberFormat("id-ID", {
             style: "currency",
@@ -59,19 +61,18 @@ export default function ProductDetailPage() {
         }).format(product.price)
         : "";
 
-    // ── LOADING STATE ──
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex items-center justify-center min-h-[60vh]">
                 <p className="text-gray-400 text-sm">Memuat produk...</p>
             </div>
         );
     }
 
-    // ── ERROR STATE ──
+    // kalau produk tidak ditemukan, tampilkan error fullpage
     if (error && !product) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <p className="text-gray-400 text-sm mb-4">{error}</p>
                     <button
@@ -88,17 +89,18 @@ export default function ProductDetailPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
 
-            {/* Tombol back */}
+            {/* navigate(-1) berarti balik ke halaman sebelumnya di history browser */}
             <button
                 onClick={() => navigate(-1)}
                 className="text-sm text-gray-400 hover:text-orange-500 font-semibold mb-6 flex items-center gap-1 transition"
             >
-                ← Kembali
+                <LuArrowLeft size={16} />
+                Kembali
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                {/* Gambar produk */}
+                {/* gambar produk */}
                 <div className="rounded-2xl overflow-hidden border border-gray-100 bg-orange-50 h-80">
                     {product.image_url ? (
                         <img
@@ -107,38 +109,34 @@ export default function ProductDetailPage() {
                             className="h-full w-full object-cover"
                         />
                     ) : (
-                        <div className="h-full w-full flex items-center justify-center text-6xl">
-                            🛍️
+                        <div className="h-full w-full flex items-center justify-center">
+                            <LuShoppingBag size={48} className="text-orange-200" />
                         </div>
                     )}
                 </div>
 
-                {/* Info produk */}
                 <div className="flex flex-col justify-between">
                     <div>
-                        {/* Kategori */}
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                        <p className="text-xs font-semibold text-orange-400 uppercase tracking-wide mb-2">
                             {product.category?.name}
                         </p>
 
-                        {/* Nama produk */}
                         <h1 className="text-2xl font-bold text-gray-800 mb-3">
                             {product.name}
                         </h1>
 
-                        {/* Harga */}
                         <p className="text-3xl font-bold text-orange-500 mb-4">
                             {formattedPrice}
                         </p>
 
-                        {/* Deskripsi */}
+                        {/* deskripsi hanya ditampilkan kalau ada isinya */}
                         {product.description && (
                             <p className="text-sm text-gray-500 leading-relaxed mb-4">
                                 {product.description}
                             </p>
                         )}
 
-                        {/* Stok */}
+                        {/* warna stok berubah tergantung kondisi — hijau kalau ada, merah kalau habis */}
                         <p className="text-sm text-gray-400 mb-6">
                             Stok tersedia:{" "}
                             <span className={`font-semibold ${product.stock > 0 ? "text-green-500" : "text-red-400"}`}>
@@ -147,19 +145,19 @@ export default function ProductDetailPage() {
                         </p>
                     </div>
 
-                    {/* Pesan sukses / error */}
                     {successMsg && (
                         <div className="bg-green-50 text-green-600 text-sm rounded-xl px-4 py-3 mb-4">
                             {successMsg}
                         </div>
                     )}
+
+                    {/* error ini hanya muncul kalau produk ada tapi ada error lain, misal stok habis */}
                     {error && product && (
                         <div className="bg-red-50 text-red-500 text-sm rounded-xl px-4 py-3 mb-4">
                             {error}
                         </div>
                     )}
 
-                    {/* Tombol aksi */}
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={handleAddToCart}

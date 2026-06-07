@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCarts, updateCart, deleteCart } from "../../services/api";
 import { CartContext } from "../../context/CartContext";
-import { getImageUrl } from "../../services/api";
+import { LuShoppingBag, LuShoppingCart, LuArrowRight } from "react-icons/lu";
 
 export default function CartPage() {
     const navigate = useNavigate();
@@ -12,7 +12,6 @@ export default function CartPage() {
     const [totalPrice, setTotalPrice] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    // ambil data cart saat halaman dibuka
     useEffect(() => {
         loadCarts();
     }, []);
@@ -29,23 +28,22 @@ export default function CartPage() {
         }
     }
 
-    // update quantity item di cart
     async function handleUpdateQty(cartId, newQty) {
-        // kalau quantity 0 atau kurang, hapus item
+        // kalau quantity dikurangi sampai 0, hapus item dari cart
         if (newQty < 1) {
             handleDelete(cartId);
             return;
         }
         try {
             await updateCart(cartId, { quantity: newQty });
-            await loadCarts();          // refresh data cart
-            await fetchCartCount();     // update badge navbar
+            // refresh data cart dan badge navbar setelah update
+            await loadCarts();
+            await fetchCartCount();
         } catch (err) {
             alert(err.response?.data?.message || "Gagal update quantity.");
         }
     }
 
-    // hapus satu item dari cart
     async function handleDelete(cartId) {
         try {
             await deleteCart(cartId);
@@ -61,20 +59,26 @@ export default function CartPage() {
         currency: "IDR",
     }).format(totalPrice);
 
-    // ── LOADING ──
+    const formatPrice = (price) =>
+        new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+        }).format(price);
+
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex items-center justify-center min-h-[60vh]">
                 <p className="text-gray-400 text-sm">Memuat keranjang...</p>
             </div>
         );
     }
 
-    // ── CART KOSONG ──
     if (carts.length === 0) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-                <p className="text-5xl">🛒</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
+                    <LuShoppingCart size={28} className="text-gray-300" />
+                </div>
                 <p className="text-gray-500 font-semibold">Keranjang kamu masih kosong</p>
                 <button
                     onClick={() => navigate("/")}
@@ -92,29 +96,26 @@ export default function CartPage() {
 
             <div className="flex flex-col lg:flex-row gap-6">
 
-                {/* List item cart */}
                 <div className="flex-1 flex flex-col gap-4">
                     {carts.map((cart) => (
                         <div
                             key={cart.id}
                             className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center"
                         >
-                            {/* Gambar produk */}
                             <div className="w-20 h-20 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
-                                {cart.product.image_url ? (
+                                {cart.product.image ? (
                                     <img
-                                        src={getImageUrl(cart.product.image_url)}
+                                        src={`http://127.0.0.1:8000/storage/${cart.product.image}`}
                                         alt={cart.product.name}
-                                        className="w-full h-full object-cover"
+                                        className="h-full w-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-2xl">
-                                        🛍️
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <LuShoppingBag size={24} className="text-orange-200" />
                                     </div>
                                 )}
                             </div>
 
-                            {/* Info produk */}
                             <div className="flex-1">
                                 <p className="text-xs text-gray-400 uppercase font-semibold mb-1">
                                     {cart.product.category?.name}
@@ -123,16 +124,12 @@ export default function CartPage() {
                                     {cart.product.name}
                                 </p>
                                 <p className="text-orange-500 font-bold">
-                                    {new Intl.NumberFormat("id-ID", {
-                                        style: "currency",
-                                        currency: "IDR",
-                                    }).format(cart.product.price)}
+                                    {formatPrice(cart.product.price)}
                                 </p>
                             </div>
 
-                            {/* Kontrol quantity */}
+                            {/* tombol kurang — kalau quantity sudah 1 dan dikurang lagi, item akan dihapus */}
                             <div className="flex items-center gap-2">
-                                {/* tombol kurang */}
                                 <button
                                     onClick={() => handleUpdateQty(cart.id, cart.quantity - 1)}
                                     className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-700 font-bold transition flex items-center justify-center"
@@ -144,7 +141,6 @@ export default function CartPage() {
                                     {cart.quantity}
                                 </span>
 
-                                {/* tombol tambah */}
                                 <button
                                     onClick={() => handleUpdateQty(cart.id, cart.quantity + 1)}
                                     className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-700 font-bold transition flex items-center justify-center"
@@ -153,7 +149,6 @@ export default function CartPage() {
                                 </button>
                             </div>
 
-                            {/* Tombol hapus */}
                             <button
                                 onClick={() => handleDelete(cart.id)}
                                 className="text-red-400 hover:text-red-600 text-sm font-semibold transition ml-2"
@@ -164,21 +159,19 @@ export default function CartPage() {
                     ))}
                 </div>
 
-                {/* Summary & checkout */}
+                {/* sticky supaya summary tetap keliatan waktu scroll list produk */}
                 <div className="lg:w-72">
                     <div className="bg-white border border-gray-100 rounded-2xl p-6 sticky top-24">
                         <h2 className="font-bold text-gray-800 mb-4">Ringkasan Belanja</h2>
 
-                        {/* Detail item */}
                         <div className="flex flex-col gap-2 mb-4">
                             {carts.map((cart) => (
                                 <div key={cart.id} className="flex justify-between text-sm text-gray-500">
-                                    <span className="truncate flex-1 mr-2">{cart.product.name} x{cart.quantity}</span>
+                                    <span className="truncate flex-1 mr-2">
+                                        {cart.product.name} x{cart.quantity}
+                                    </span>
                                     <span className="font-semibold text-gray-700">
-                                        {new Intl.NumberFormat("id-ID", {
-                                            style: "currency",
-                                            currency: "IDR",
-                                        }).format(cart.product.price * cart.quantity)}
+                                        {formatPrice(cart.product.price * cart.quantity)}
                                     </span>
                                 </div>
                             ))}
@@ -186,18 +179,17 @@ export default function CartPage() {
 
                         <hr className="border-gray-100 mb-4" />
 
-                        {/* Total */}
                         <div className="flex justify-between items-center mb-6">
                             <span className="font-bold text-gray-800">Total</span>
                             <span className="font-bold text-orange-500 text-lg">{formattedTotal}</span>
                         </div>
 
-                        {/* Tombol checkout */}
                         <button
                             onClick={() => navigate("/checkout")}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition"
+                            className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition"
                         >
-                            Checkout →
+                            Checkout
+                            <LuArrowRight size={16} />
                         </button>
 
                         <button

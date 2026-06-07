@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import UserNavbar from "../components/UserNavbar";
 import CartProvider from "../context/CartContext";
+import UserFooter from "../components/UserFooter";
 
 // Layout untuk halaman user
 // Outlet = tempat halaman anak dirender (CatalogPage, CartPage, dll)
@@ -15,6 +16,8 @@ export default function UserLayout() {
                 <main className="max-w-6xl mx-auto px-6 py-8">
                     <Outlet />
                 </main>
+
+                <UserFooter/>
             </div>
         </CartProvider>
     );

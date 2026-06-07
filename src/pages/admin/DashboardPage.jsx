@@ -3,13 +3,18 @@ import { getProducts, getOrders } from "../../services/api";
 import { LuBox, LuClipboardList, LuCircleCheck, LuClock } from "react-icons/lu";
 
 export default function DashboardPage() {
+
+    // semua angka yang ditampilin di stat cards
     const [stats, setStats] = useState({
         totalProducts: 0,
         totalOrders: 0,
         ordersSelesai: 0,
         ordersDiproses: 0,
     });
+
+    // 5 pesanan terbaru untuk ditampilkan di tabel bawah
     const [recentOrders, setRecentOrders] = useState([]);
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -18,7 +23,7 @@ export default function DashboardPage() {
 
     async function loadDashboard() {
         try {
-            // ambil data produk dan order sekaligus
+            // ambil data produk dan order bersamaan biar lebih cepat
             const [productsRes, ordersRes] = await Promise.all([
                 getProducts(),
                 getOrders(),
@@ -27,7 +32,8 @@ export default function DashboardPage() {
             const products = productsRes.data.data;
             const orders = ordersRes.data.data;
 
-            // hitung statistik dari data yang didapat
+            // statistik dihitung langsung dari data yang baru diambil
+            // filter() dipakai buat ngitung order per status tanpa request tambahan ke API
             setStats({
                 totalProducts: products.length,
                 totalOrders: orders.length,
@@ -35,7 +41,8 @@ export default function DashboardPage() {
                 ordersDiproses: orders.filter((o) => o.status === "diproses").length,
             });
 
-            // ambil 5 pesanan terbaru untuk ditampilkan
+            // slice(0, 5) ambil 5 elemen pertama dari array
+            // asumsi: API sudah mengembalikan data urut dari yang terbaru
             setRecentOrders(orders.slice(0, 5));
 
         } catch (err) {
@@ -45,6 +52,7 @@ export default function DashboardPage() {
         }
     }
 
+    // format angka jadi Rupiah, contoh: 75000 → "Rp 75.000"
     const formattedPrice = (price) =>
         new Intl.NumberFormat("id-ID", {
             style: "currency",
@@ -61,13 +69,14 @@ export default function DashboardPage() {
 
     return (
         <div>
-            {/* Header */}
+
+            {/* Judul halaman */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
                 <p className="text-sm text-gray-400 mt-1">Selamat datang di panel admin PawMart</p>
             </div>
 
-            {/* Stat cards */}
+            {/* 4 stat cards: produk, total order, diproses, selesai */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
                 <div className="bg-white border border-gray-100 rounded-2xl p-5">
@@ -112,7 +121,7 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* Tabel pesanan terbaru */}
+            {/* Tabel 5 pesanan terbaru */}
             <div className="bg-white border border-gray-100 rounded-2xl p-6">
                 <h2 className="font-bold text-gray-800 mb-4">Pesanan Terbaru</h2>
 
@@ -133,15 +142,21 @@ export default function DashboardPage() {
                             <tbody className="divide-y divide-gray-50">
                                 {recentOrders.map((order) => (
                                     <tr key={order.id}>
+
                                         <td className="py-3 font-semibold text-gray-800">
                                             #{order.id}
                                         </td>
+
+                                        {/* nama pembeli diambil dari relasi order.user */}
                                         <td className="py-3 text-gray-600">
                                             {order.user?.name}
                                         </td>
+
                                         <td className="py-3 font-semibold text-gray-800">
                                             {formattedPrice(order.total_price)}
                                         </td>
+
+                                        {/* badge status: hijau kalau selesai, kuning kalau diproses */}
                                         <td className="py-3">
                                             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${order.status === "selesai"
                                                     ? "bg-green-100 text-green-600"
@@ -150,6 +165,8 @@ export default function DashboardPage() {
                                                 {order.status}
                                             </span>
                                         </td>
+
+                                        {/* format tanggal ke bahasa Indonesia, contoh: "5 Jun 2025" */}
                                         <td className="py-3 text-gray-400">
                                             {new Date(order.created_at).toLocaleDateString("id-ID", {
                                                 day: "numeric",
@@ -157,6 +174,7 @@ export default function DashboardPage() {
                                                 year: "numeric",
                                             })}
                                         </td>
+
                                     </tr>
                                 ))}
                             </tbody>
@@ -164,6 +182,7 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
+
         </div>
     );
 }
